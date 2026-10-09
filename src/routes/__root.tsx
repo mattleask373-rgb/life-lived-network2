@@ -1,0 +1,233 @@
+import type { ErrorComponentProps } from "@tanstack/react-router";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+  Outlet,
+  Link,
+  createRootRouteWithContext,
+  useRouter,
+  HeadContent,
+  Scripts,
+} from "@tanstack/react-router";
+import { useEffect, type ReactNode } from "react";
+
+import appCss from "../styles.css?url";
+import { reportLovableError } from "../lib/lovable-error-reporting";
+import { WorldProvider } from "../lib/world-context";
+import { useSession } from "../hooks/use-session";
+
+function NotFoundComponent() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-background px-4">
+      <div className="max-w-md text-center">
+        <h1 className="text-7xl font-bold text-foreground">404</h1>
+        <h2 className="mt-4 text-xl font-semibold text-foreground">Page not found</h2>
+        <p className="mt-2 text-sm text-muted-foreground">
+          The page you're looking for doesn't exist or has been moved.
+        </p>
+        <div className="mt-6">
+          <Link
+            to="/"
+            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+          >
+            Go home
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ErrorComponent({ error, reset }: ErrorComponentProps) {
+  console.error(error);
+  const router = useRouter();
+  useEffect(() => {
+    reportLovableError(error, { boundary: "tanstack_root_error_component" });
+  }, [error]);
+
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-background px-4">
+      <div className="max-w-md text-center">
+        <h1 className="text-xl font-semibold tracking-tight text-foreground">
+          This page didn't load
+        </h1>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Something went wrong on our end. You can try refreshing or head back home.
+        </p>
+        <div className="mt-6 flex flex-wrap justify-center gap-2">
+          <button
+            onClick={() => {
+              router.invalidate();
+              reset();
+            }}
+            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+          >
+            Try again
+          </button>
+          <a
+            href="/"
+            className="inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
+          >
+            Go home
+          </a>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
+  head: () => ({
+    meta: [
+      { charSet: "utf-8" },
+      { name: "viewport", content: "width=device-width, initial-scale=1" },
+      { title: "The Living World — a real-life network" },
+      {
+        name: "description",
+        content:
+          "A living map of what people are actually doing near you: work, music, food, nature, community projects and people open to meeting.",
+      },
+      { property: "og:title", content: "The Living World — a real-life network" },
+      {
+        property: "og:description",
+        content:
+          "Find something real happening near you, then go and live it. Work, music, experiences, community projects and people.",
+      },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
+    ],
+    links: [
+      {
+        rel: "stylesheet",
+        href: appCss,
+      },
+      { rel: "preconnect", href: "https://fonts.googleapis.com" },
+      { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
+      {
+        rel: "stylesheet",
+        href: "https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Karla:wght@400;500;600&display=swap",
+      },
+      { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
+    ],
+  }),
+  shellComponent: RootShell,
+  component: RootComponent,
+  notFoundComponent: NotFoundComponent,
+  errorComponent: ErrorComponent,
+});
+
+function RootShell({ children }: { children: ReactNode }) {
+  return (
+    <html lang="en">
+      <head>
+        <HeadContent />
+      </head>
+      <body>
+        {children}
+        <Scripts />
+      </body>
+    </html>
+  );
+}
+
+/**
+ * Three doors into one world.
+ *
+ * Explore, Find and Journey are not three products — they are three ways into
+ * the same places, people, needs and possibilities. Everything else a person
+ * does (their hour, their skills, their saved things, their conversations) sits
+ * quietly underneath the door it belongs to, rather than competing with it.
+ */
+const DOORS: {
+  to: string;
+  label: string;
+  blurb: string;
+  under: { to: string; label: string }[];
+}[] = [
+  {
+    to: "/",
+    label: "Explore",
+    blurb: "What's around you",
+    under: [
+      { to: "/make", label: "Add something real" },
+      { to: "/life-list", label: "Your life list" },
+    ],
+  },
+  {
+    to: "/need",
+    label: "Find",
+    blurb: "What you need, or can give",
+    under: [
+      { to: "/give", label: "I have an hour" },
+      { to: "/help", label: "What you can do" },
+      { to: "/earn", label: "Ways to earn" },
+      { to: "/conversations", label: "Conversations" },
+    ],
+  },
+  {
+    to: "/road-trip",
+    label: "Journey",
+    blurb: "What's along your way",
+    under: [{ to: "/journey", label: "Shape a longer stay" }],
+  },
+];
+
+function SiteHeader() {
+  const { user, ready } = useSession();
+  return (
+    <header className="border-b border-border bg-card/80 backdrop-blur-sm">
+      <nav aria-label="Main" className="mx-auto flex max-w-5xl flex-col gap-3 px-4 py-3 sm:px-6">
+        <div className="flex items-baseline justify-between gap-4">
+          <Link to="/" className="min-w-0 truncate font-semibold tracking-tight">
+            The Living World
+          </Link>
+          <Link
+            to={user ? "/profile" : "/auth"}
+            activeProps={{ className: "text-foreground" }}
+            className="focus-ink shrink-0 rounded-md px-2 py-1 text-sm text-muted-foreground hover:text-foreground"
+          >
+            {!ready ? "Account" : user ? "Your account" : "Sign in"}
+          </Link>
+        </div>
+        <div className="flex items-stretch gap-2 overflow-x-auto pb-1">
+          {DOORS.map((door) => (
+            <Link
+              key={door.to}
+              to={door.to}
+              activeProps={{ className: "border-primary/60 bg-background text-foreground" }}
+              className="focus-ink min-w-0 flex-1 whitespace-nowrap rounded-xl border border-border px-3 py-2 hover:bg-background"
+            >
+              <span className="block text-sm font-medium">{door.label}</span>
+              <span className="block truncate text-xs text-muted-foreground">{door.blurb}</span>
+            </Link>
+          ))}
+        </div>
+        <div className="flex items-center gap-4 overflow-x-auto whitespace-nowrap text-xs text-muted-foreground">
+          {DOORS.flatMap((door) => door.under).map((link) => (
+            <Link
+              key={link.to}
+              to={link.to}
+              activeProps={{ className: "text-foreground" }}
+              className="hover:text-foreground"
+            >
+              {link.label}
+            </Link>
+          ))}
+        </div>
+      </nav>
+    </header>
+  );
+}
+
+function RootComponent() {
+  const { queryClient } = Route.useRouteContext();
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <WorldProvider>
+        <SiteHeader />
+        {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
+        <Outlet />
+      </WorldProvider>
+    </QueryClientProvider>
+  );
+}
